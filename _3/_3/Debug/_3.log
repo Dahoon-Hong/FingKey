@@ -1,0 +1,35 @@
+﻿빌드 시작: 2016-03-28 오후 4:36:30
+     1>2 노드의 "c:\Users\dahoon\documents\visual studio 2013\Projects\_3\_3\_3.vcxproj" 프로젝트(Build 대상)입니다.
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+     1>c:\program files (x86)\microsoft visual studio 12.0\vc\include\opencv2\core\mat.hpp(1965): warning C4819: 현재 코드 페이지(949)에서 표시할 수 없는 문자가 파일에 들어 있습니다. 데이터가 손실되지 않게 하려면 해당 파일을 유니코드 형식으로 저장하십시오.
+     1>c:\program files (x86)\microsoft visual studio 12.0\vc\include\opencv2\core\persistence.hpp : warning C4819: 현재 코드 페이지(949)에서 표시할 수 없는 문자가 파일에 들어 있습니다. 데이터가 손실되지 않게 하려면 해당 파일을 유니코드 형식으로 저장하십시오.
+     1>c:\program files (x86)\microsoft visual studio 12.0\vc\include\opencv2\core\utility.hpp : warning C4819: 현재 코드 페이지(949)에서 표시할 수 없는 문자가 파일에 들어 있습니다. 데이터가 손실되지 않게 하려면 해당 파일을 유니코드 형식으로 저장하십시오.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(55): error C3861: 'findContours': 식별자를 찾을 수 없습니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(68): error C3861: 'boundingRect': 식별자를 찾을 수 없습니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(79): error C3861: 'circle': 식별자를 찾을 수 없습니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(80): error C3861: 'line': 식별자를 찾을 수 없습니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(81): error C3861: 'line': 식별자를 찾을 수 없습니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(82): error C3861: 'line': 식별자를 찾을 수 없습니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(83): error C3861: 'line': 식별자를 찾을 수 없습니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(84): error C3861: 'putText': 식별자를 찾을 수 없습니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(108): error C2065: 'VideoCapture' : 선언되지 않은 식별자입니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(108): error C2146: 구문 오류 : ';'이(가) 'capture' 식별자 앞에 없습니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(108): error C2065: 'capture' : 선언되지 않은 식별자입니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(114): error C2065: 'capture' : 선언되지 않은 식별자입니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(114): error C2228: '.open' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+                 'unknown-type' 형식입니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(116): error C2065: 'capture' : 선언되지 않은 식별자입니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(116): error C2228: '.isOpened' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+                 'unknown-type' 형식입니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(117): error C2065: 'cout' : 선언되지 않은 식별자입니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(125): error C2065: 'capture' : 선언되지 않은 식별자입니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(125): error C2228: '.get' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+                 'unknown-type' 형식입니다.
+     1>c:\users\dahoon\documents\visual studio 2013\projects\_3\_3\main.cpp(125): fatal error C1903: 이전 오류를 복구할 수 없습니다. 컴파일이 중지됩니다.
+     1>"c:\Users\dahoon\documents\visual studio 2013\Projects\_3\_3\_3.vcxproj" 프로젝트를 빌드했습니다(Build 대상). - 실패
+
+빌드하지 못했습니다.
+
+경과 시간: 00:00:01.85
