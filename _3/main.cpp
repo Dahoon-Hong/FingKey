@@ -21,14 +21,24 @@ float distanceP2P(Point a, Point b){
 int main(int argc, char** argv)
 {
 	cv::VideoCapture cap(0); //capture the video from web cam
-	
+
 	if (!cap.isOpened())  // if not success, exit program
 	{
 		cout << "Cannot open the web cam" << endl;
 		return -1;
 	}
 	int iLowH = 0;	int iHighH = 179;	int iLowS = 0;	int iHighS = 255;	int iLowV = 0;	int iHighV = 255;
-		
+	//Create trackbars in "Control" window
+	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
+	cvCreateTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
+	cvCreateTrackbar("HighH", "Control", &iHighH, 179);
+
+	cvCreateTrackbar("LowS", "Control", &iLowS, 255); //Saturation (0 - 255)
+	cvCreateTrackbar("HighS", "Control", &iHighS, 255);
+
+	cvCreateTrackbar("LowV", "Control", &iLowV, 255); //Value (0 - 255)
+	cvCreateTrackbar("HighV", "Control", &iHighV, 255);
+
 	while (true)
 	{
 		Sleep(50);
@@ -45,14 +55,6 @@ int main(int argc, char** argv)
 		cvtColor(imgOriginal, imgHSV, cv::COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
 		cv::Mat imgThresholded;
 
-		 //set color that close to human body
-		iLowH = 0;
-		iLowS = 50;
-		iLowV = 0;
-		iHighH = 40;
-		iHighS = 255;
-		iHighV = 255;
-		
 		inRange(imgHSV, cv::Scalar(iLowH, iLowS, iLowV), cv::Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
 
 		//morphological opening (remove small objects from the foreground)
@@ -60,9 +62,10 @@ int main(int argc, char** argv)
 		dilate(imgThresholded, imgThresholded, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)), cv::Point(-1, -1), 1);
 		
 		//morphological closing (fill small holes in the foreground)
-		dilate(imgThresholded, imgThresholded, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)), cv::Point(-1, -1), 2);
-		erode(imgThresholded, imgThresholded, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)), cv::Point(-1, -1), 2);
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		dilate(imgThresholded, imgThresholded, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)), cv::Point(-1, -1), 3);
+		erode(imgThresholded, imgThresholded, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)), cv::Point(-1, -1), 3);
+		
+
 		vector<vector<cv::Point>> contours;
 		findContours(imgThresholded, contours, cv::noArray(), cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 		int maxK = 0;
@@ -74,10 +77,13 @@ int main(int argc, char** argv)
 				maxArea = area;
 			}
 		}
+
+		
+
 		vector<int> hull;
 		vector<cv::Point> handContour = contours[maxK];
 		cv::convexHull(handContour, hull);
-		
+
 		vector<cv::Point> ptsHull;
 		for (int k = 0; k < hull.size(); k++){
 			int i = hull[k];
@@ -91,7 +97,7 @@ int main(int argc, char** argv)
 			center.y = M.m01 / M.m00;
 			//printf("Center of hull -> x: %.3f\t y: %.3f\n", center.x, center.y);
 		}
-		 //convex hull and points
+		//convex hull and points 
 		vector<cv::Vec4i> defects;
 		convexityDefects(handContour, hull, defects);
 		for (int k = 1; k < defects.size(); k++){
@@ -100,8 +106,8 @@ int main(int argc, char** argv)
 			cv::Point ptEnd = handContour[v[1]];
 			cv::Point ptFar = handContour[v[2]];
 			float depth = v[3] / 256.0;
-			
-			
+
+
 			float l1 = distanceP2P(ptStart, ptFar);
 			float l2 = distanceP2P(ptEnd, ptFar);
 			float dot = (ptStart.x - ptFar.x)*(ptEnd.x - ptFar.x) + (ptStart.y - ptFar.y)*(ptEnd.y - ptFar.y);
@@ -115,16 +121,40 @@ int main(int argc, char** argv)
 				circle(imgOriginal, ptEnd, 6, cv::Scalar(0, 0, 255), 2);
 				circle(imgOriginal, ptFar, 6, cv::Scalar(0, 0, 255), 2);
 
-				
-			//	putText(imgOriginal, string(to_string(angle)), ptFar, cv::FONT_HERSHEY_PLAIN, 2.0f, cv::Scalar(0, 0, 0));
-			//	putText(imgOriginal, string(to_string(l1)), ptStart, cv::FONT_HERSHEY_PLAIN, 3.0f, cv::Scalar(0, 0, 0));
-			//	putText(imgOriginal, string(to_string(l2)), ptEnd, cv::FONT_HERSHEY_PLAIN, 3.0f, cv::Scalar(0, 0, 0));
+
+				//	putText(imgOriginal, string(to_string(angle)), ptFar, cv::FONT_HERSHEY_PLAIN, 2.0f, cv::Scalar(0, 0, 0));
+				//	putText(imgOriginal, string(to_string(l1)), ptStart, cv::FONT_HERSHEY_PLAIN, 3.0f, cv::Scalar(0, 0, 0));
+				//	putText(imgOriginal, string(to_string(l2)), ptEnd, cv::FONT_HERSHEY_PLAIN, 3.0f, cv::Scalar(0, 0, 0));
 			}
 		}
-		//inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
-		
-		imshow("Original", imgOriginal); //show the original image
+		//redundant just for test
+			inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
+			//morphological opening (remove small objects from the foreground)
+			erode(imgThresholded, imgThresholded, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)), cv::Point(-1, -1), 1);
+			dilate(imgThresholded, imgThresholded, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)), cv::Point(-1, -1), 1);
 
+			//morphological closing (fill small holes in the foreground)
+			dilate(imgThresholded, imgThresholded, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)), cv::Point(-1, -1), 3);
+			erode(imgThresholded, imgThresholded, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5)), cv::Point(-1, -1), 3);
+
+		//making mask
+			Point2f center;
+			float radius;
+			minEnclosingCircle(handContour, center, radius);
+			imgThresholded = ~imgThresholded;
+			// get the circle's bounding rect
+			Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
+			Mat mask = Mat::zeros(imgThresholded.size(), CV_8UC1);
+			circle(mask, center, radius, CV_RGB(255, 255, 255),-1, 8);
+			Mat imagePart = Mat::zeros(imgThresholded.size(), imgThresholded.type());
+			imgThresholded.copyTo(imagePart, mask);
+		// obtain the image ROI:
+		//Mat circleROI(imgOriginal, boundingRect);
+		//circle(circleROI, center, radius, Scalar::all(1), 0);
+		
+		circle(imgOriginal, center, radius, Scalar(255, 0, 0), 2);
+		imshow("Original", imgOriginal); //show the original image
+		imshow("Thresholded Image", imagePart); //show the thresholded image
 		if (cv::waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
 			cout << "esc key is pressed by user" << endl;
