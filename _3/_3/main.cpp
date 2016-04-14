@@ -50,6 +50,9 @@ int main(int argc, char** argv)
 			cout << "Cannot read a frame from video stream" << endl;
 			break;
 		}
+	//	cvNot(imgOriginal, imgOriginal);
+
+
 
 		cv::Mat imgHSV;
 		cvtColor(imgOriginal, imgHSV, cv::COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
@@ -77,8 +80,6 @@ int main(int argc, char** argv)
 				maxArea = area;
 			}
 		}
-
-		
 
 		vector<int> hull;
 		vector<cv::Point> handContour = contours[maxK];
@@ -141,17 +142,18 @@ int main(int argc, char** argv)
 			Point2f center;
 			float radius;
 			minEnclosingCircle(handContour, center, radius);
-			imgThresholded = ~imgThresholded;
-			// get the circle's bounding rect
+		//	imgThresholded = ~imgThresholded;
+		// get the circle's bounding rect
+			
 			Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
 			Mat mask = Mat::zeros(imgThresholded.size(), CV_8UC1);
-			circle(mask, center, radius, CV_RGB(255, 255, 255),-1, 8);
+			circle(mask, center, radius*4/5, CV_RGB(255, 255, 255),15, 8);
 			// imagePart : hand focused image
-			Mat imagePart = Mat::zeros(imgThresholded.size(), imgThresholded.type());
-			imgThresholded.copyTo(imagePart, mask);
+			Mat imagePart = Mat::zeros(imgOriginal.size(), imgOriginal.type());
+			imgOriginal.copyTo(imagePart, mask);
 		
 		circle(imgOriginal, center, radius, Scalar(255, 0, 0), 2);
-		imshow("Original", imgOriginal); //show the original image
+		imshow("Original", imgThresholded); //show the original image
 		imshow("Parted image Image", imagePart); //show the thresholded image
 		if (cv::waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
