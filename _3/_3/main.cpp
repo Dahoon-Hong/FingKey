@@ -2,7 +2,7 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-
+#include <opencv2/video/background_segm.hpp>
 #include <Windows.h>
 #include <string>
 #include <math.h>
@@ -15,11 +15,46 @@ using std::distance;
 using std::string;
 using std::to_string;
 using namespace cv;
+
+
 float distanceP2P(Point a, Point b){
 	return sqrt(fabs(pow((a).x - (b).x, 2) + pow(a.y - b.y, 2)));
 };
+
+static void refineSegments(const Mat& img, Mat& mask, Mat& dst)
+{
+	int niters = 3;
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	Mat temp;
+	dilate(mask, temp, Mat(), Point(-1, -1), niters);
+	erode(temp, temp, Mat(), Point(-1, -1), niters * 2);
+	dilate(temp, temp, Mat(), Point(-1, -1), niters);
+	findContours(temp, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+	dst = Mat::zeros(img.size(), CV_8UC3);
+	if (contours.size() == 0)
+		return;
+	// iterate through all the top-level contours,
+	// draw each connected component with its own random color
+	int idx = 0, largestComp = 0;
+	double maxArea = 0;
+	for (; idx >= 0; idx = hierarchy[idx][0])
+	{
+		const vector<Point>& c = contours[idx];
+		double area = fabs(contourArea(Mat(c)));
+		if (area > maxArea)
+		{
+			maxArea = area;
+			largestComp = idx;
+		}
+	}
+	Scalar color(0, 0, 255);
+	drawContours(dst, contours, largestComp, color, FILLED, LINE_8, hierarchy);
+}
+
 int main(int argc, char** argv)
 {
+	bool update_bg_model = true;
 	cv::VideoCapture cap(0); //capture the video from web cam
 
 	if (!cap.isOpened())  // if not success, exit program
@@ -50,9 +85,6 @@ int main(int argc, char** argv)
 			cout << "Cannot read a frame from video stream" << endl;
 			break;
 		}
-	//	cvNot(imgOriginal, imgOriginal);
-
-
 
 		cv::Mat imgHSV;
 		cvtColor(imgOriginal, imgHSV, cv::COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
@@ -143,7 +175,7 @@ int main(int argc, char** argv)
 			float radius;
 			minEnclosingCircle(handContour, center, radius);
 		//	imgThresholded = ~imgThresholded;
-		// get the circle's bounding rect
+		//get the circle's bounding rect
 			
 			Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
 			Mat mask = Mat::zeros(imgThresholded.size(), CV_8UC1);

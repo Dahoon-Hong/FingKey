@@ -100,51 +100,47 @@ int main(int argc, char** argv)
 	}
 	namedWindow("video", 1);
 	namedWindow("segmented", 1);
-	cv::namedWindow("back", 0);
+	cv::namedWindow("back", 1);
 	Ptr<BackgroundSubtractorMOG2> bgsubtractor = createBackgroundSubtractorMOG2();
 	bgsubtractor->setVarThreshold(10);
 	try {
 		/*-- Declarations --*/
 
 		camShift::CamShift camShift;
-		bool selectionHasBeenSet = false;
-		void* sharedPointers[] = { &camShift, &selectionHasBeenSet };
+		bool selectionHasBeenSet = false; void* sharedPointers[] = { &camShift, &selectionHasBeenSet };
+		cv::setMouseCallback("segmented", mouseFunction, sharedPointers);
 
 		for (;;)
 		{
 			cap >> tmp_frame;
 			if (tmp_frame.empty())
 				break;
-			camShift.setCapturedRawFrame(tmp_frame);
-			if (selectionHasBeenSet) {
-
-				/* Execute the CAMShift algorithm */
-				camShift.runCamShift();
-
-				/* Draw an ellipse on the captured raw frame, hopefully indicating where the tracked
-				object is located in the frame */
-				cv::ellipse(tmp_frame, camShift.getRotatedTrack(), cv::Scalar(0, 0, 255), 3, CV_AA);
-
-				/* Update the window that displays the backprojections */
-				cv::imshow("back", camShift.getBackprojection());
-			}
-
 			//	bgsubtractor->apply(tmp_frame, bgmask, update_bg_model ? -1 : 0);
 			//	refineSegments(tmp_frame, bgmask, out_frame);
-
+//back substraction
 			vector<vector<cv::Point>> contours;
 			absdiff(tmp_frame, init, tmp_frame);
 
+//make binaryMat
 			cv::Mat grayscaleMat(tmp_frame.size(), CV_8U);
-
-			//Convert BGR to Gray
 			cv::cvtColor(tmp_frame, grayscaleMat, CV_BGR2GRAY);
-
-			//Binary image
 			cv::Mat binaryMat(grayscaleMat.size(), grayscaleMat.type());
-
-			//Apply thresholding
 			cv::threshold(grayscaleMat, binaryMat, 30, 255, cv::THRESH_BINARY);
+
+
+			binaryMat = ~binaryMat;
+			camShift.setCapturedRawFrame(tmp_frame);
+			
+			if (selectionHasBeenSet) {
+				/* Execute the CAMShift algorithm */
+				camShift.runCamShift();
+				/* Draw an ellipse on the captured raw frame, hopefully indicating where the tracked
+				object is located in the frame */
+				cv::ellipse(binaryMat, camShift.getRotatedTrack(), cv::Scalar(70, 100, 255), 3, CV_AA);
+
+				/* Update the window that displays the backprojections */
+				//cv::imshow("back", camShift.getBackprojection());
+			}
 
 			flip(binaryMat, binaryMat, 1);
 			//imshow("video", imgThresholded);
