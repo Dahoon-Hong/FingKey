@@ -3,7 +3,6 @@
 #include "CamShift.h"
 
 namespace camShift {
-
 	CamShift::CamShift() : 
 			medianBlurAmount(MEDIAN_BLUR),
 			thresholdAmount(THRESHOLD) {
@@ -57,18 +56,22 @@ namespace camShift {
 	}
 
 	void CamShift::runCamShift() {
-		setHsvFrame();
+	//	setHsvFrame();
+		/*
 		cv::calcBackProject(&hsvFrame, 1, 
 			channels, 
 			histoFrame, 
 			backProjectionFrame, 
 			getConstantHistoRanges());
-		backProjectionFrame &= maskFrame; // intersection between bpf and mf? This might be useless
+		*/
+	//	backProjectionFrame &= maskFrame; // intersection between bpf and mf? This might be useless
+		/*
 		cv::threshold(backProjectionFrame, backProjectionFrame, thresholdAmount, 255, cv::THRESH_BINARY);
 		cv::medianBlur(backProjectionFrame, backProjectionFrame, medianBlurAmount);
-		cv::erode(backProjectionFrame, backProjectionFrame, erosionElement);
-		cv::dilate(backProjectionFrame, backProjectionFrame, dilationElement);
-
+		*/
+		//cv::erode(backProjectionFrame, backProjectionFrame, erosionElement);
+		//cv::dilate(backProjectionFrame, backProjectionFrame, dilationElement);
+		
 		cv::RotatedRect prevTrackRotated = trackRotated;
 		trackRotated = cv::CamShift(backProjectionFrame, track,
 					cv::TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1));

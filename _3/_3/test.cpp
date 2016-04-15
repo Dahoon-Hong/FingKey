@@ -10,9 +10,10 @@
 #include <ios>
 #include <limits>
 #include <exception>
+#include <ctype.h>
+#define PI 3.14159
 using namespace std;
 using namespace cv;
-using namespace camShift;
 static void help()
 {
 	printf("\n"
@@ -22,103 +23,38 @@ static void help()
 		"Call\n"
 		"./segment_objects [video file, else it reads camera 0]\n\n");
 }
-static void refineSegments(const Mat& img, Mat& mask, Mat& dst)
-{
-	int niters = 3;
-	vector<vector<Point> > contours;
-	vector<Vec4i> hierarchy;
-	Mat temp;
-	dilate(mask, temp, Mat(), Point(-1, -1), niters);
-	erode(temp, temp, Mat(), Point(-1, -1), niters * 2);
-	dilate(temp, temp, Mat(), Point(-1, -1), niters);
-	findContours(temp, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
-	dst = Mat::zeros(img.size(), img.type());
-	if (contours.size() == 0)
-		return;
-	// iterate through all the top-level contours,
-	// draw each connected component with its own random color
-	int idx = 0, largestComp = 0;
-	double maxArea = 0;
-	for (; idx >= 0; idx = hierarchy[idx][0])
-	{
-		const vector<Point>& c = contours[idx];
-		double area = fabs(contourArea(Mat(c)));
-		if (area > maxArea)
-		{
-			maxArea = area;
-			largestComp = idx;
-		}
-	}
-	Scalar color(255, 255, 255);
-
-	drawContours(dst, contours, largestComp, color, FILLED, LINE_8, hierarchy);
-	//drawContours(dst, vector<vector<cv::Point>>(1, ptsHull), 0, cv::Scalar(255, 0, 0), 2);
-}
-void mouseFunction(int event, int x, int y, int, void* parameter) {
-	static cv::Point startPoint;
-	camShift::CamShift& camShift = *((camShift::CamShift*)((void**)parameter)[0]);
-	bool& selectionHasBeenSet = *((bool*)((void**)parameter)[1]);
-
-	switch (event) {
-	case cv::EVENT_LBUTTONDOWN:
-		startPoint = cv::Point(x, y);
-		break;
-	case cv::EVENT_LBUTTONUP:
-		camShift.setSelection(cv::Rect(startPoint, cv::Point(x, y)));
-		selectionHasBeenSet = true;
-		break;
-	default: break;
-	}
-}
+float distanceP2P(Point a, Point b){
+	return sqrt(fabs(pow((a).x - (b).x, 2) + pow(a.y - b.y, 2)));
+};
 int main(int argc, char** argv)
 {
 	VideoCapture cap;
 	bool update_bg_model = true;
-	CommandLineParser parser(argc, argv, "{help h||}{@input||}");
-	if (parser.has("help"))
-	{
-		help();
-		return 0;
-	}
-	string input = parser.get<std::string>("@input");
-	if (input.empty())
-		cap.open(0);
-	else
-		cap.open(input);
-	if (!cap.isOpened())
-	{
-		printf("\nCan not open camera or video file\n");
-		return -1;
-	}
-	Mat tmp_frame, bgmask, out_frame,init;
+
+	cap.open(0);
+
+	Mat tmp_frame, bgmask, out_frame,init ,original;
 	cap >> tmp_frame;
 	cap >> init;
+
 	if (tmp_frame.empty())
 	{
 		printf("can not read data from the video source\n");
 		return -1;
 	}
-	namedWindow("video", 1);
 	namedWindow("segmented", 1);
-	cv::namedWindow("back", 1);
-	Ptr<BackgroundSubtractorMOG2> bgsubtractor = createBackgroundSubtractorMOG2();
-	bgsubtractor->setVarThreshold(10);
+	namedWindow("Original", 1);
+
+
 	try {
-		/*-- Declarations --*/
-
-		camShift::CamShift camShift;
-		bool selectionHasBeenSet = false; void* sharedPointers[] = { &camShift, &selectionHasBeenSet };
-		cv::setMouseCallback("segmented", mouseFunction, sharedPointers);
-
 		for (;;)
 		{
 			cap >> tmp_frame;
+			cap >> original;
 			if (tmp_frame.empty())
 				break;
-			//	bgsubtractor->apply(tmp_frame, bgmask, update_bg_model ? -1 : 0);
-			//	refineSegments(tmp_frame, bgmask, out_frame);
+			
 //back substraction
-			vector<vector<cv::Point>> contours;
 			absdiff(tmp_frame, init, tmp_frame);
 
 //make binaryMat
@@ -126,35 +62,127 @@ int main(int argc, char** argv)
 			cv::cvtColor(tmp_frame, grayscaleMat, CV_BGR2GRAY);
 			cv::Mat binaryMat(grayscaleMat.size(), grayscaleMat.type());
 			cv::threshold(grayscaleMat, binaryMat, 30, 255, cv::THRESH_BINARY);
-
-
-			binaryMat = ~binaryMat;
-			camShift.setCapturedRawFrame(tmp_frame);
 			
-			if (selectionHasBeenSet) {
-				/* Execute the CAMShift algorithm */
-				camShift.runCamShift();
-				/* Draw an ellipse on the captured raw frame, hopefully indicating where the tracked
-				object is located in the frame */
-				cv::ellipse(binaryMat, camShift.getRotatedTrack(), cv::Scalar(70, 100, 255), 3, CV_AA);
+			cv::Mat temp(binaryMat.size(), binaryMat.type());
+			temp = binaryMat;
+			
 
-				/* Update the window that displays the backprojections */
-				//cv::imshow("back", camShift.getBackprojection());
+		//
+		//	flip(temp, temp, 1);
+			//till now, create binary Mat
+			//making mask
+		//	Point2f center;
+		//	float radius;
+		//	minEnclosingCircle(handContour, center, radius);
+			//	imgThresholded = ~imgThresholded;
+			//get the circle's bounding rect
+
+		//	Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
+			Rect boundingRect1(0, 0, temp.cols, temp.rows *3/4);
+		//	Mat mask = Mat::zeros(temp.size(), CV_8UC1);
+			Mat mask1 = Mat::zeros(temp.size(), temp.type());
+			//circle(mask, center, radius*4/5, CV_RGB(255, 255, 255),15, 8);
+			//	rectangle(mask, boundingRect, CV_RGB(255, 255, 255), -1);
+			rectangle(mask1, boundingRect1, CV_RGB(255, 255, 255), -1);
+			temp = temp & mask1;
+			
+			// imagePart : hand focused image
+		//	Mat imagePart = Mat::zeros(temp.size(), temp.type());
+			//	original.copyTo(imagePart, mask);
+		//	original.copyTo(temp, mask1);
+
+			vector<vector<cv::Point>> contours;
+			findContours(temp, contours, cv::noArray(), cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+			int maxK = 0;
+			if (contours.size() == 0)
+				continue;
+
+			double maxArea = contourArea(contours[0]);
+			for (int k = 0; k < contours.size(); k++){
+				double area = contourArea(contours[k]);
+				if (area > maxArea){
+					maxK = k;
+					maxArea = area;
+				}
 			}
+			
 
-			flip(binaryMat, binaryMat, 1);
-			//imshow("video", imgThresholded);
-			imshow("segmented", binaryMat);
+			vector<int> hull;
+			vector<cv::Point> handContour = contours[maxK];
+			cv::convexHull(handContour, hull);
+
+			vector<cv::Point> ptsHull;
+			int min = temp.rows;
+			int min_idx=0;
+			for (int k = 0; k < hull.size(); k++){
+				int i = hull[k];
+				if (min > handContour[i].y){
+					min_idx = i;
+					min = handContour[i].y;
+				}
+				ptsHull.push_back(handContour[i]);
+			}
+			circle(original, handContour[min_idx], 6, cv::Scalar(0, 100, 255), -1);
+			drawContours(original, vector<vector<cv::Point>>(1, ptsHull), 0, cv::Scalar(255, 0, 0), 2);
+			for (int k = 0; k < contours.size(); k++){
+				cv::Point2f center;
+				cv::Moments M = moments(contours[k]);
+				center.x = M.m10 / M.m00;
+				center.y = M.m01 / M.m00;
+				//printf("Center of hull -> x: %.3f\t y: %.3f\n", center.x, center.y);
+			}
+			//convex hull and points 
+			vector<cv::Vec4i> defects;
+			convexityDefects(handContour, hull, defects);
+			for (int k = 1; k < defects.size(); k++){
+				cv::Vec4i v = defects[k];
+				cv::Point ptStart = handContour[v[0]];
+				cv::Point ptEnd = handContour[v[1]];
+				cv::Point ptFar = handContour[v[2]];
+				float depth = v[3] / 256.0;
 
 
+				float l1 = distanceP2P(ptStart, ptFar);
+				float l2 = distanceP2P(ptEnd, ptFar);
+				float dot = (ptStart.x - ptFar.x)*(ptEnd.x - ptFar.x) + (ptStart.y - ptFar.y)*(ptEnd.y - ptFar.y);
+				float angle = acosf(dot / (l1*l2));
+				angle = angle * 180 / PI;
+
+				if (angle <95 && depth > 10){
+					line(original, ptStart, ptFar, cv::Scalar(0, 255, 0), 2);
+					line(original, ptEnd, ptFar, cv::Scalar(0, 255, 0), 2);
+					circle(original, ptStart, 6, cv::Scalar(k * 10, 150, 150), 2);
+					circle(original, ptEnd, 6, cv::Scalar(0, 0, 255), 2);
+					circle(original, ptFar, 6, cv::Scalar(0, 0, 255), 2);
+				}
+			}
+				
+			//making mask
+				Point2f center;
+				float radius;
+				minEnclosingCircle(handContour, center, radius);
+			//	circle(original, center, radius, Scalar(255, 255, 255), -1);
+				line(original, center, handContour[min_idx], Scalar(0, 100, 255), 5);
+			//	imgThresholded = ~imgThresholded;
+			//get the circle's bounding rect
+
+			//	Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
+				Mat mask = Mat::zeros(original.size(), original.type());
+				circle(mask, center, radius * 4 / 5, CV_RGB(255, 255, 255), 15);
+			//	rectangle(mask, boundingRect, CV_RGB(255, 255, 255), -1);
+			//	rectangle(mask1, boundingRect1, CV_RGB(255, 255, 255), -1);
+				
+				Mat img_parted(original.size(), original.type());
+				img_parted = original & mask;
+
+				flip(original, original, 1);
+			imshow("Original", original);
+			imshow("Segmented", temp);
+			imshow("Parted", img_parted);
+			
 			int keycode = waitKey(30);
 			if (keycode == 27)
 				break;
-			if (keycode == ' ')
-			{
-				update_bg_model = !update_bg_model;
-				printf("Learn background is in state = %d\n", update_bg_model);
-			}
 		}
 	}
 	catch (exception& e) {
