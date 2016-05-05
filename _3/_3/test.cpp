@@ -78,6 +78,11 @@ int main(int argc, char** argv)
 			cv::cvtColor(tmp_frame, grayscaleMat, CV_BGR2GRAY);
 			cv::Mat binaryMat(grayscaleMat.size(), grayscaleMat.type());
 			cv::threshold(grayscaleMat, binaryMat, 30, 255, cv::THRESH_BINARY);
+			imshow("before", binaryMat);
+			erode(binaryMat, binaryMat, Mat(), Point(-1, -1), 2, 1, 1);
+			dilate(binaryMat, binaryMat, Mat(), Point(-1, -1), 5, 1, 1);
+			erode(binaryMat, binaryMat, Mat(), Point(-1, -1), 2, 1, 1);
+			imshow("after", binaryMat);
 			
 			cv::Mat temp(binaryMat.size(), binaryMat.type());
 			binaryMat.copyTo(temp);
