@@ -1,2 +1,6 @@
 #TargetFrameworkVersion=v4.0:PlatformToolSet=v120:EnableManagedIncrementalBuild=false:VCToolArchitecture=Native32Bit
+<<<<<<< HEAD
 Release|x64|C:\Users\dahoon\Documents\Visual Studio 2013\Projects\_3\FingKey\_3\|
+=======
+Release|x64|C:\Users\JaeSeok\Desktop\FingKey-master\_3\|
+>>>>>>> refs/heads/pr/1

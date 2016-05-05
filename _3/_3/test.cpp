@@ -77,7 +77,11 @@ int main(int argc, char** argv)
 			cv::Mat grayscaleMat(tmp_frame.size(), CV_8U);
 			cv::cvtColor(tmp_frame, grayscaleMat, CV_BGR2GRAY);
 			cv::Mat binaryMat(grayscaleMat.size(), grayscaleMat.type());
+<<<<<<< HEAD
 			cv::threshold(grayscaleMat, binaryMat, 60, 255, cv::THRESH_BINARY);
+=======
+			cv::threshold(grayscaleMat, binaryMat, 30, 255, cv::THRESH_BINARY);
+>>>>>>> refs/heads/pr/1
 			
 			cv::Mat temp(binaryMat.size(), binaryMat.type());
 			binaryMat.copyTo(temp);
@@ -219,7 +223,11 @@ int main(int argc, char** argv)
 			
 
 			imshow("Original", original);
+<<<<<<< HEAD
 			imshow("Segmented", temp);
+=======
+			//imshow("Segmented", temp);
+>>>>>>> refs/heads/pr/1
 			//imshow("binary", binaryMat);
 			//imshow("Parted", img_parted);
 			
