@@ -14,18 +14,23 @@
 #define PI 3.14159
 using namespace std;
 using namespace cv;
-static void help()
-{
-	printf("\n"
-		"This program demonstrated a simple method of connected components clean up of background subtraction\n"
-		"When the program starts, it begins learning the background.\n"
-		"You can toggle background learning on and off by hitting the space bar.\n"
-		"Call\n"
-		"./segment_objects [video file, else it reads camera 0]\n\n");
-}
+
+#define	CHAR_RECOGNITION_MODE	100
+#define NUM_RECOGNITION_MODE	200
+
+
 float distanceP2P(Point a, Point b){
 	return sqrt(fabs(pow((a).x - (b).x, 2) + pow(a.y - b.y, 2)));
 };
+
+bool checkPointInRect(Rect r, Point p){
+	if ((p.x >= r.x && p.x <= r.x + r.width) && (p.y >= r.y && p.y <= r.y + r.height))
+		return true;
+	else
+		return false;
+}
+
+
 int main(int argc, char** argv)
 {
 	VideoCapture cap;
@@ -42,9 +47,20 @@ int main(int argc, char** argv)
 		printf("can not read data from the video source\n");
 		return -1;
 	}
-	namedWindow("segmented", 1);
-	namedWindow("Original", 1);
 
+	// finger route
+	vector<cv::Point> trace;
+	int trace_cnt = 0;
+
+	// Character or Number recognition mode 
+	Rect NumRecogRect(10, 10, 90, 50);
+	Rect CharRecogRect(110, 10, 90, 50);
+	int RecogMode = NUM_RECOGNITION_MODE;
+	int RecogModeChange_cnt = 0;
+	int CAM_WIDTH = init.size().width;
+	int CAM_HEIGHT = init.size().height;
+	Point NumStringPoint(CAM_WIDTH - NumRecogRect.width + 10, 15 + NumRecogRect.height/2);
+	Point CharStringPoint(CAM_WIDTH - (CharRecogRect.width + NumRecogRect.width) - 5, 15 + CharRecogRect.height / 2);
 
 	try {
 		for (;;)
@@ -61,42 +77,26 @@ int main(int argc, char** argv)
 			cv::Mat grayscaleMat(tmp_frame.size(), CV_8U);
 			cv::cvtColor(tmp_frame, grayscaleMat, CV_BGR2GRAY);
 			cv::Mat binaryMat(grayscaleMat.size(), grayscaleMat.type());
-			cv::threshold(grayscaleMat, binaryMat, 30, 255, cv::THRESH_BINARY);
+			cv::threshold(grayscaleMat, binaryMat, 60, 255, cv::THRESH_BINARY);
 			
 			cv::Mat temp(binaryMat.size(), binaryMat.type());
-			temp = binaryMat;
+			binaryMat.copyTo(temp);
 			
 
-		//
-		//	flip(temp, temp, 1);
-			//till now, create binary Mat
-			//making mask
-		//	Point2f center;
-		//	float radius;
-		//	minEnclosingCircle(handContour, center, radius);
-			//	imgThresholded = ~imgThresholded;
-			//get the circle's bounding rect
-
-		//	Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
-			Rect boundingRect1(0, 0, temp.cols, temp.rows *3/4);
-		//	Mat mask = Mat::zeros(temp.size(), CV_8UC1);
+			Rect boundingRect1(0, 0, temp.cols, temp.rows *5/6);
 			Mat mask1 = Mat::zeros(temp.size(), temp.type());
-			//circle(mask, center, radius*4/5, CV_RGB(255, 255, 255),15, 8);
-			//	rectangle(mask, boundingRect, CV_RGB(255, 255, 255), -1);
 			rectangle(mask1, boundingRect1, CV_RGB(255, 255, 255), -1);
 			temp = temp & mask1;
-			
-			// imagePart : hand focused image
-		//	Mat imagePart = Mat::zeros(temp.size(), temp.type());
-			//	original.copyTo(imagePart, mask);
-		//	original.copyTo(temp, mask1);
+		
 
+			
 			vector<vector<cv::Point>> contours;
 			findContours(temp, contours, cv::noArray(), cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+			
 			int maxK = 0;
 			if (contours.size() == 0)
 				continue;
-
+			
 			double maxArea = contourArea(contours[0]);
 			for (int k = 0; k < contours.size(); k++){
 				double area = contourArea(contours[k]);
@@ -106,7 +106,6 @@ int main(int argc, char** argv)
 				}
 			}
 			
-
 			vector<int> hull;
 			vector<cv::Point> handContour = contours[maxK];
 			cv::convexHull(handContour, hull);
@@ -131,54 +130,99 @@ int main(int argc, char** argv)
 				center.y = M.m01 / M.m00;
 				//printf("Center of hull -> x: %.3f\t y: %.3f\n", center.x, center.y);
 			}
-			//convex hull and points 
-			vector<cv::Vec4i> defects;
-			convexityDefects(handContour, hull, defects);
-			for (int k = 1; k < defects.size(); k++){
-				cv::Vec4i v = defects[k];
-				cv::Point ptStart = handContour[v[0]];
-				cv::Point ptEnd = handContour[v[1]];
-				cv::Point ptFar = handContour[v[2]];
-				float depth = v[3] / 256.0;
-
-
-				float l1 = distanceP2P(ptStart, ptFar);
-				float l2 = distanceP2P(ptEnd, ptFar);
-				float dot = (ptStart.x - ptFar.x)*(ptEnd.x - ptFar.x) + (ptStart.y - ptFar.y)*(ptEnd.y - ptFar.y);
-				float angle = acosf(dot / (l1*l2));
-				angle = angle * 180 / PI;
-
-				if (angle <95 && depth > 10){
-					line(original, ptStart, ptFar, cv::Scalar(0, 255, 0), 2);
-					line(original, ptEnd, ptFar, cv::Scalar(0, 255, 0), 2);
-					circle(original, ptStart, 6, cv::Scalar(k * 10, 150, 150), 2);
-					circle(original, ptEnd, 6, cv::Scalar(0, 0, 255), 2);
-					circle(original, ptFar, 6, cv::Scalar(0, 0, 255), 2);
-				}
-			}
+			
 				
 			//making mask
-				Point2f center;
-				float radius;
-				minEnclosingCircle(handContour, center, radius);
-			//	circle(original, center, radius, Scalar(255, 255, 255), -1);
-				line(original, center, handContour[min_idx], Scalar(0, 100, 255), 5);
-			//	imgThresholded = ~imgThresholded;
-			//get the circle's bounding rect
+			Point2f center;
+			float radius;
+			minEnclosingCircle(handContour, center, radius);
+		//	circle(original, center, radius, Scalar(255, 255, 255), -1);
+			line(original, center, handContour[min_idx], Scalar(0, 100, 255), 5);
+		//	imgThresholded = ~imgThresholded;
+		//get the circle's bounding rect
 
-			//	Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
-				Mat mask = Mat::zeros(original.size(), original.type());
-				circle(mask, center, radius * 4 / 5, CV_RGB(255, 255, 255), 15);
-			//	rectangle(mask, boundingRect, CV_RGB(255, 255, 255), -1);
-			//	rectangle(mask1, boundingRect1, CV_RGB(255, 255, 255), -1);
+		//	Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
+			Mat mask = Mat::zeros(binaryMat.size(), binaryMat.type());
+			circle(mask, center, radius * 5 / 6, CV_RGB(255, 255, 255), 10);
+		//	rectangle(mask, boundingRect, CV_RGB(255, 255, 255), -1);
+		//	rectangle(mask1, boundingRect1, CV_RGB(255, 255, 255), -1);
 				
-				Mat img_parted(original.size(), original.type());
-				img_parted = original & mask;
+			Mat img_parted(binaryMat.size(), binaryMat.type());
+			img_parted = binaryMat & mask;
+			Mat label;
+			int num_label = connectedComponents(img_parted, label) - 1;
+			if (num_label == 2) {
+				trace.push_back(handContour[min_idx]);
+				trace_cnt = 0;
+			}
+				
+			
+			else {
+				//printf("%d\n", num_label);
+				trace_cnt++;
+				if (trace_cnt >= 7)
+					trace.clear();
+			}
+			
 
-				flip(original, original, 1);
+			for (int i = 1; i < trace.size(); i++)
+			{
+				//cout << "[" << trace[i].x << ", " << trace[i].y << "] ";
+				line(original, trace[i-1], trace[i], Scalar(255, 100, 0), 5);
+			}
+			cout << endl;
+
+
+			Mat overlay(original.size(), original.type());
+			original.copyTo(overlay);
+
+			if (checkPointInRect(CharRecogRect, handContour[min_idx])){
+				RecogModeChange_cnt++;
+				if (RecogModeChange_cnt == 7) {
+					RecogMode = CHAR_RECOGNITION_MODE;
+					RecogModeChange_cnt = 0;
+					trace.clear();
+					printf("CHARACTER RECOGNITION MODE!\n");
+				}
+			}
+			else if (checkPointInRect(NumRecogRect, handContour[min_idx])){
+				RecogModeChange_cnt++;
+				if (RecogModeChange_cnt == 7) {
+					RecogMode = NUM_RECOGNITION_MODE;
+					RecogModeChange_cnt = 0;
+					trace.clear();
+					printf("NUMBER RECOGNITION MODE!\n");
+				}
+			}
+			else
+				RecogModeChange_cnt = 0;
+
+
+			if (RecogMode == CHAR_RECOGNITION_MODE) {
+				rectangle(overlay, CharRecogRect, CV_RGB(50, 205, 50), -1);
+				rectangle(overlay, NumRecogRect, CV_RGB(128, 128, 128), -1);
+			}
+			else {
+				rectangle(overlay, CharRecogRect, CV_RGB(128, 128, 128), -1);
+				rectangle(overlay, NumRecogRect, CV_RGB(50, 205, 50), -1);
+			}
+
+			addWeighted(overlay, 0.5, original, 1 - 0.5, 0, original);
+
+			flip(original, original, 1);
+			//flip(binaryMat, binaryMat, 1);
+			flip(img_parted, img_parted, 1);
+
+			putText(original, "NUM", NumStringPoint, 2, 0.7, Scalar::all(255));
+			putText(original, "CHAR", CharStringPoint, 2, 0.7, Scalar::all(255));
+			
+			
+
 			imshow("Original", original);
 			imshow("Segmented", temp);
-			imshow("Parted", img_parted);
+			//imshow("binary", binaryMat);
+			//imshow("Parted", img_parted);
+			
 			
 			int keycode = waitKey(30);
 			if (keycode == 27)
@@ -193,3 +237,32 @@ int main(int argc, char** argv)
 	
 	return 0;
 }
+
+
+/*
+//convex hull and points
+vector<cv::Vec4i> defects;
+convexityDefects(handContour, hull, defects);
+for (int k = 1; k < defects.size(); k++){
+cv::Vec4i v = defects[k];
+cv::Point ptStart = handContour[v[0]];
+cv::Point ptEnd = handContour[v[1]];
+cv::Point ptFar = handContour[v[2]];
+float depth = v[3] / 256.0;
+
+
+float l1 = distanceP2P(ptStart, ptFar);
+float l2 = distanceP2P(ptEnd, ptFar);
+float dot = (ptStart.x - ptFar.x)*(ptEnd.x - ptFar.x) + (ptStart.y - ptFar.y)*(ptEnd.y - ptFar.y);
+float angle = acosf(dot / (l1*l2));
+angle = angle * 180 / PI;
+
+if (angle <95 && depth > 10){
+line(original, ptStart, ptFar, cv::Scalar(0, 255, 0), 2);
+line(original, ptEnd, ptFar, cv::Scalar(0, 255, 0), 2);
+circle(original, ptStart, 6, cv::Scalar(k * 10, 150, 150), 2);
+circle(original, ptEnd, 6, cv::Scalar(0, 0, 255), 2);
+circle(original, ptFar, 6, cv::Scalar(0, 0, 255), 2);
+}
+}
+*/
