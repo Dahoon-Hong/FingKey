@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string>
 #include "CamShift.h"
+#include <ctime>
 #include <iostream>
 #include <ios>
 #include <limits>
@@ -37,7 +38,7 @@ int main(int argc, char** argv)
 	bool update_bg_model = true;
 
 	cap.open(0);
-
+	cap.set(CV_CAP_PROP_FPS, 30);
 	Mat tmp_frame, bgmask, out_frame,init ,original;
 	cap >> tmp_frame;
 	cap >> init;
@@ -62,13 +63,19 @@ int main(int argc, char** argv)
 	Point NumStringPoint(CAM_WIDTH - NumRecogRect.width + 10, 15 + NumRecogRect.height/2);
 	Point CharStringPoint(CAM_WIDTH - (CharRecogRect.width + NumRecogRect.width) - 5, 15 + CharRecogRect.height / 2);
 
+	int num_frame = 0;
+	time_t start, end;
+	time(&start);
 	try {
 		for (;;)
 		{
 			cap >> tmp_frame;
 			cap >> original;
+			
 			if (tmp_frame.empty())
 				break;
+
+			double fps = cap.get(CV_CAP_PROP_FPS);
 			
 //back substraction
 			absdiff(tmp_frame, init, tmp_frame);
@@ -77,19 +84,12 @@ int main(int argc, char** argv)
 			cv::Mat grayscaleMat(tmp_frame.size(), CV_8U);
 			cv::cvtColor(tmp_frame, grayscaleMat, CV_BGR2GRAY);
 			cv::Mat binaryMat(grayscaleMat.size(), grayscaleMat.type());
-<<<<<<< HEAD
-			cv::threshold(grayscaleMat, binaryMat, 60, 255, cv::THRESH_BINARY);
-=======
 			cv::threshold(grayscaleMat, binaryMat, 30, 255, cv::THRESH_BINARY);
-<<<<<<< HEAD
->>>>>>> refs/heads/pr/1
-=======
-			imshow("before", binaryMat);
+		//	imshow("before", binaryMat);
 			erode(binaryMat, binaryMat, Mat(), Point(-1, -1), 2, 1, 1);
 			dilate(binaryMat, binaryMat, Mat(), Point(-1, -1), 5, 1, 1);
 			erode(binaryMat, binaryMat, Mat(), Point(-1, -1), 2, 1, 1);
-			imshow("after", binaryMat);
->>>>>>> refs/remotes/origin/pr/2
+		//	imshow("after", binaryMat);
 			
 			cv::Mat temp(binaryMat.size(), binaryMat.type());
 			binaryMat.copyTo(temp);
@@ -182,7 +182,6 @@ int main(int argc, char** argv)
 				//cout << "[" << trace[i].x << ", " << trace[i].y << "] ";
 				line(original, trace[i-1], trace[i], Scalar(255, 100, 0), 5);
 			}
-			cout << endl;
 
 
 			Mat overlay(original.size(), original.type());
@@ -228,14 +227,16 @@ int main(int argc, char** argv)
 			putText(original, "NUM", NumStringPoint, 2, 0.7, Scalar::all(255));
 			putText(original, "CHAR", CharStringPoint, 2, 0.7, Scalar::all(255));
 			
-			
+			time(&end);
+			num_frame++;
+
+			std::ostringstream strs;
+			strs << num_frame / difftime(end, start);
+			std::string fpsString = strs.str();
+			putText(original, fpsString, Point(10, 30), 2, 0.7, Scalar::all(255));
 
 			imshow("Original", original);
-<<<<<<< HEAD
-			imshow("Segmented", temp);
-=======
 			//imshow("Segmented", temp);
->>>>>>> refs/heads/pr/1
 			//imshow("binary", binaryMat);
 			//imshow("Parted", img_parted);
 			
