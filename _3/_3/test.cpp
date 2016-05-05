@@ -81,7 +81,15 @@ int main(int argc, char** argv)
 			cv::threshold(grayscaleMat, binaryMat, 60, 255, cv::THRESH_BINARY);
 =======
 			cv::threshold(grayscaleMat, binaryMat, 30, 255, cv::THRESH_BINARY);
+<<<<<<< HEAD
 >>>>>>> refs/heads/pr/1
+=======
+			imshow("before", binaryMat);
+			erode(binaryMat, binaryMat, Mat(), Point(-1, -1), 2, 1, 1);
+			dilate(binaryMat, binaryMat, Mat(), Point(-1, -1), 5, 1, 1);
+			erode(binaryMat, binaryMat, Mat(), Point(-1, -1), 2, 1, 1);
+			imshow("after", binaryMat);
+>>>>>>> refs/remotes/origin/pr/2
 			
 			cv::Mat temp(binaryMat.size(), binaryMat.type());
 			binaryMat.copyTo(temp);

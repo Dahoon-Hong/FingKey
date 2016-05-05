@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 ﻿빌드 시작: 2016-04-16 오전 12:15:26
      1>2 노드의 "C:\Users\dahoon\Documents\Visual Studio 2013\Projects\_3\FingKey\_3\_3\_3.vcxproj" 프로젝트(Build 대상)입니다.
      1>ClCompile:
@@ -24,6 +25,9 @@
 경과 시간: 00:00:02.60
 =======
 ﻿Build started 2016-04-29 오후 5:51:09.
+=======
+﻿Build started 2016-05-05 오전 10:39:39.
+>>>>>>> refs/remotes/origin/pr/2
      1>Project "C:\Users\JaeSeok\Desktop\FingKey-master\_3\_3\_3.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /IC:\opencv\build\include /Zi /nologo /W3 /WX- /sdl /O2 /Oi /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Release\\" /Fd"x64\Release\vc120.pdb" /Gd /TP /errorReport:prompt /FS test.cpp
@@ -32,9 +36,9 @@
      1>C:\opencv\build\include\opencv2/core/persistence.hpp : warning C4819: The file contains a character that cannot be represented in the current code page (949). Save the file in Unicode format to prevent data loss
      1>C:\opencv\build\include\opencv2/core/utility.hpp : warning C4819: The file contains a character that cannot be represented in the current code page (949). Save the file in Unicode format to prevent data loss
      1>test.cpp(23): warning C4244: 'return' : conversion from 'double' to 'float', possible loss of data
-     1>test.cpp(129): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
-     1>test.cpp(130): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
-     1>test.cpp(146): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+     1>test.cpp(134): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>test.cpp(135): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>test.cpp(151): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\JaeSeok\Desktop\FingKey-master\_3\x64\Release\_3.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:C:\opencv\build\x64\vc12\lib opencv_world310.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\JaeSeok\Desktop\FingKey-master\_3\x64\Release\_3.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\JaeSeok\Desktop\FingKey-master\_3\x64\Release\_3.lib" /MACHINE:X64 x64\Release\test.obj
          Generating code
@@ -44,5 +48,9 @@
 
 Build succeeded.
 
+<<<<<<< HEAD
 Time Elapsed 00:00:01.89
 >>>>>>> refs/heads/pr/1
+=======
+Time Elapsed 00:00:02.52
+>>>>>>> refs/remotes/origin/pr/2
