@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string>
 #include "CamShift.h"
+#include <ctime>
 #include <iostream>
 #include <ios>
 #include <limits>
@@ -62,13 +63,19 @@ int main(int argc, char** argv)
 	Point NumStringPoint(CAM_WIDTH - NumRecogRect.width + 10, 15 + NumRecogRect.height/2);
 	Point CharStringPoint(CAM_WIDTH - (CharRecogRect.width + NumRecogRect.width) - 5, 15 + CharRecogRect.height / 2);
 
+	int num_frame = 0;
+	time_t start, end;
+	time(&start);
 	try {
 		for (;;)
 		{
 			cap >> tmp_frame;
 			cap >> original;
+			
 			if (tmp_frame.empty())
 				break;
+
+			double fps = cap.get(CV_CAP_PROP_FPS);
 			
 //back substraction
 			absdiff(tmp_frame, init, tmp_frame);
@@ -221,7 +228,13 @@ int main(int argc, char** argv)
 			putText(original, "NUM", NumStringPoint, 2, 0.7, Scalar::all(255));
 			putText(original, "CHAR", CharStringPoint, 2, 0.7, Scalar::all(255));
 			
-			
+			time(&end);
+			num_frame++;
+
+			std::ostringstream strs;
+			strs << num_frame / difftime(end, start);
+			std::string fpsString = strs.str();
+			putText(original, fpsString, Point(10, 30), 2, 0.7, Scalar::all(255));
 
 			imshow("Original", original);
 			//imshow("Segmented", temp);
