@@ -13,6 +13,7 @@
 #include <ctype.h>
 #include <Windows.h>
 #include <tchar.h>
+#include <conio.h>
 
 #define PI 3.14159
 #define MAX_STRING 256
@@ -53,7 +54,6 @@ void MouseSetup(INPUT *buffer)
 	buffer->mi.dwExtraInfo = 0;
 }
 
-
 void MouseMoveAbsolute(INPUT *buffer, int x, int y)
 {
 	buffer->mi.dx = (x * (0xFFFF / SCREEN_WIDTH));
@@ -62,7 +62,6 @@ void MouseMoveAbsolute(INPUT *buffer, int x, int y)
 
 	SendInput(1, buffer, sizeof(INPUT));
 }
-
 
 void MouseClick(INPUT *buffer)
 {
@@ -74,8 +73,6 @@ void MouseClick(INPUT *buffer)
 	buffer->mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTUP);
 	SendInput(1, buffer, sizeof(INPUT));
 }
-
-
 
 int main(int argc, char** argv)
 {
@@ -118,7 +115,6 @@ int main(int argc, char** argv)
 	Point MouseStringPoint(CAM_WIDTH - (MouseRect.width + DeleteRecogRect.width + SpaceRecogRect.width + CharRecogRect.width + NumRecogRect.width) - 43, 15 + MouseRect.height / 2);
 
 	//rect size for get char
-	//int sizeofRect = int(CAM_WIDTH/7);
 	int sizeofRect = 100;
 	int init_y;
 
@@ -141,6 +137,13 @@ int main(int argc, char** argv)
 	int bTop = 0;
 	buf[bTop] = 0;
 
+	HANDLE outcon = GetStdHandle(STD_OUTPUT_HANDLE);//you don't have to call this function every time
+
+	CONSOLE_FONT_INFOEX font;//CONSOLE_FONT_INFOEX is defined in some windows header
+	font.dwFontSize.X = 16;
+	font.dwFontSize.Y = 12;
+	SetCurrentConsoleFontEx(outcon, false, &font);//PCONSOLE_FONT_INFOEX is the same as CONSOLE_FONT_INFOEX*
+
 	try {
 		system("echo init > .\\output\\999.txt");
 		system("DEL .\\output\\*.txt");
@@ -154,6 +157,7 @@ int main(int argc, char** argv)
 
 			//back substraction
 			absdiff(tmp_frame, init, tmp_frame);
+			
 
 			//make binaryMat
 			cv::Mat grayscaleMat(tmp_frame.size(), CV_8U);
@@ -190,6 +194,7 @@ int main(int argc, char** argv)
 					maxArea = area;
 				}
 			}
+
 			// convex hull
 			vector<int> hull;
 			vector<cv::Point> handContour = contours[maxK];
@@ -215,7 +220,6 @@ int main(int argc, char** argv)
 				center.y = M.m01 / M.m00;
 			}
 
-
 			//making mask
 			Point2f center;
 			float radius;
@@ -227,9 +231,7 @@ int main(int argc, char** argv)
 			//	Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
 			Mat mask = Mat::zeros(binaryMat.size(), binaryMat.type());
 			circle(mask, center, radius * 5 / 6, CV_RGB(255, 255, 255), 10);
-			//	rectangle(mask, boundingRect, CV_RGB(255, 255, 255), -1);
-			//	rectangle(mask1, boundingRect1, CV_RGB(255, 255, 255), -1);
-
+			
 			//check number of finger
 			Mat img_parted(binaryMat.size(), binaryMat.type());
 			img_parted = binaryMat & mask;
@@ -245,7 +247,6 @@ int main(int argc, char** argv)
 				trace_cnt++;
 				if (trace_cnt >= 7)
 					trace.clear();
-
 			}
 
 			imshow("bin", binaryMat);
@@ -273,10 +274,8 @@ int main(int argc, char** argv)
 						String output_name = to_string(img_cnt);
 						waiting_output_list.push_back(output_name);
 
-
 						imwrite("./images/" + img_name, subImg, compression_params);
-						//imshow("./images/" + to_string(idx + img_cnt * 4) + ".png", subImg);
-
+						
 						trace.erase(trace.begin(), trace.begin() + i);
 
 						std::string lang = "num";
