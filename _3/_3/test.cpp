@@ -1,26 +1,36 @@
-#include "opencv2/imgproc/imgproc.hpp"
+﻿#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include <opencv2/core/core.hpp>
 #include <stdio.h>
 #include <string>
-#include "CamShift.h"
 #include <ctime>
 #include <iostream>
 #include <ios>
 #include <limits>
 #include <exception>
 #include <ctype.h>
+#include <Windows.h>
+#include <tchar.h>
+#include <conio.h>
+
 #define PI 3.14159
+#define MAX_STRING 256
+
 using namespace std;
 using namespace cv;
 
 #define	CHAR_RECOGNITION_MODE	100
-#define NUM_RECOGNITION_MODE	200
-#define SPACE_RECOGNITION_MODE	400
-#define DELETE_RECOGNITION_MODE	800
+#define NUM_RECOGNITION_MODE	101
+#define SPACE_RECOGNITION_MODE	102
+#define DELETE_RECOGNITION_MODE	103
+#define MOUSE_MODE	104
 
+#define SCREEN_WIDTH 1920
+#define SCREEN_HEIGHT 1080
+
+char *mode_t[5] = { "CHAR_RECOGNITION_MODE", "NUM_RECOGNITION_MODE", "SPACE_MODE", "DELETE_MODE", "MOUSE_MODE" };
 
 float distanceP2P(Point a, Point b){
 	return sqrt(fabs(pow((a).x - (b).x, 2) + pow(a.y - b.y, 2)));
@@ -33,6 +43,36 @@ bool checkPointInRect(Rect r, Point p){
 		return false;
 }
 
+void MouseSetup(INPUT *buffer)
+{
+	buffer->type = INPUT_MOUSE;
+	buffer->mi.dx = (0 * (0xFFFF / SCREEN_WIDTH));
+	buffer->mi.dy = (0 * (0xFFFF / SCREEN_HEIGHT));
+	buffer->mi.mouseData = 0;
+	buffer->mi.dwFlags = MOUSEEVENTF_ABSOLUTE;
+	buffer->mi.time = 0;
+	buffer->mi.dwExtraInfo = 0;
+}
+
+void MouseMoveAbsolute(INPUT *buffer, int x, int y)
+{
+	buffer->mi.dx = (x * (0xFFFF / SCREEN_WIDTH));
+	buffer->mi.dy = (y * (0xFFFF / SCREEN_HEIGHT));
+	buffer->mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE);
+
+	SendInput(1, buffer, sizeof(INPUT));
+}
+
+void MouseClick(INPUT *buffer)
+{
+	buffer->mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTDOWN);
+	SendInput(1, buffer, sizeof(INPUT));
+
+	Sleep(10);
+
+	buffer->mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTUP);
+	SendInput(1, buffer, sizeof(INPUT));
+}
 
 int main(int argc, char** argv)
 {
@@ -41,7 +81,7 @@ int main(int argc, char** argv)
 
 	cap.open(0);
 	cap.set(CV_CAP_PROP_FPS, 30);
-	Mat tmp_frame, bgmask, out_frame,init ,original;
+	Mat tmp_frame, bgmask, out_frame, init, original;
 	cap >> tmp_frame;
 	cap >> init;
 
@@ -61,57 +101,79 @@ int main(int argc, char** argv)
 	Rect CharRecogRect(110, 10, 90, 50);
 	Rect SpaceRecogRect(210, 10, 90, 50);
 	Rect DeleteRecogRect(310, 10, 90, 50);
+	Rect MouseRect(410, 10, 90, 50);
 
-	int RecogMode = NUM_RECOGNITION_MODE;
+	int RecogMode = CHAR_RECOGNITION_MODE;
 	int RecogModeChange_cnt = 0;
 	int CAM_WIDTH = init.size().width;
 	int CAM_HEIGHT = init.size().height;
-	
-	Point NumStringPoint(CAM_WIDTH - NumRecogRect.width + 10, 15 + NumRecogRect.height/2);
+
+	Point NumStringPoint(CAM_WIDTH - NumRecogRect.width + 10, 15 + NumRecogRect.height / 2);
 	Point CharStringPoint(CAM_WIDTH - (CharRecogRect.width + NumRecogRect.width) - 5, 15 + CharRecogRect.height / 2);
 	Point SpaceStringPoint(CAM_WIDTH - (SpaceRecogRect.width + CharRecogRect.width + NumRecogRect.width) - 17, 15 + SpaceRecogRect.height / 2);
 	Point DeleteStringPoint(CAM_WIDTH - (DeleteRecogRect.width + SpaceRecogRect.width + CharRecogRect.width + NumRecogRect.width) - 15, 15 + DeleteRecogRect.height / 2);
+	Point MouseStringPoint(CAM_WIDTH - (MouseRect.width + DeleteRecogRect.width + SpaceRecogRect.width + CharRecogRect.width + NumRecogRect.width) - 43, 15 + MouseRect.height / 2);
 
 	//rect size for get char
-	//int sizeofRect = int(CAM_WIDTH/7);
 	int sizeofRect = 100;
+	int init_y;
 
 	// properties of saved image
 	vector<int> compression_params;
 	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
 	compression_params.push_back(9);
 	int img_cnt = 0;
+	vector<String> waiting_output_list;
+
+	//mouse
+	INPUT buffer[1];
+	MouseSetup(buffer);
 
 	int num_frame = 0;
 	time_t start, end;
 	time(&start);
+
+	char* buf = new char[MAX_STRING];
+	int bTop = 0;
+	buf[bTop] = 0;
+
+	HANDLE outcon = GetStdHandle(STD_OUTPUT_HANDLE);//you don't have to call this function every time
+
+	CONSOLE_FONT_INFOEX font;//CONSOLE_FONT_INFOEX is defined in some windows header
+	font.dwFontSize.X = 16;
+	font.dwFontSize.Y = 12;
+	SetCurrentConsoleFontEx(outcon, false, &font);//PCONSOLE_FONT_INFOEX is the same as CONSOLE_FONT_INFOEX*
+
 	try {
+		system("echo init > .\\output\\999.txt");
+		system("DEL .\\output\\*.txt");
 		for (;;)
 		{
 			cap >> tmp_frame;
 			cap >> original;
-			
+			Mat outimg = Mat::zeros(original.size(), original.type());
 			if (tmp_frame.empty())
 				break;
-			
-//back substraction
-			absdiff(tmp_frame, init, tmp_frame);
 
-//make binaryMat
+			//back substraction
+			absdiff(tmp_frame, init, tmp_frame);
+			
+
+			//make binaryMat
 			cv::Mat grayscaleMat(tmp_frame.size(), CV_8U);
 			cv::cvtColor(tmp_frame, grayscaleMat, CV_BGR2GRAY);
 			cv::Mat binaryMat(grayscaleMat.size(), grayscaleMat.type());
 			cv::threshold(grayscaleMat, binaryMat, 30, 255, cv::THRESH_BINARY);
-		
+
 			erode(binaryMat, binaryMat, Mat(), Point(-1, -1), 2, 1, 1);
 			dilate(binaryMat, binaryMat, Mat(), Point(-1, -1), 5, 1, 1);
 			erode(binaryMat, binaryMat, Mat(), Point(-1, -1), 2, 1, 1);
-			
+
 			cv::Mat temp(binaryMat.size(), binaryMat.type());
 			binaryMat.copyTo(temp);
-			
-//making mask
-			Rect boundingRect1(0, 0, temp.cols, temp.rows *5/6);
+
+			//making mask
+			Rect boundingRect1(0, 0, temp.cols, temp.rows * 5 / 6);
 			Mat mask1 = Mat::zeros(temp.size(), temp.type());
 			rectangle(mask1, boundingRect1, CV_RGB(255, 255, 255), -1);
 			temp = temp & mask1;
@@ -119,11 +181,11 @@ int main(int argc, char** argv)
 			//contour
 			vector<vector<cv::Point>> contours;
 			findContours(temp, contours, cv::noArray(), cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-			
+
 			int maxK = 0;
 			if (contours.size() == 0)
 				continue;
-	
+
 			double maxArea = contourArea(contours[0]);
 			for (int k = 0; k < contours.size(); k++){
 				double area = contourArea(contours[k]);
@@ -132,6 +194,7 @@ int main(int argc, char** argv)
 					maxArea = area;
 				}
 			}
+
 			// convex hull
 			vector<int> hull;
 			vector<cv::Point> handContour = contours[maxK];
@@ -139,7 +202,7 @@ int main(int argc, char** argv)
 
 			vector<cv::Point> ptsHull;
 			int min = temp.rows;
-			int min_idx=0;
+			int min_idx = 0;
 			for (int k = 0; k < hull.size(); k++){
 				int i = hull[k];
 				if (min > handContour[i].y){
@@ -156,64 +219,86 @@ int main(int argc, char** argv)
 				center.x = M.m10 / M.m00;
 				center.y = M.m01 / M.m00;
 			}
-			
-				
+
 			//making mask
 			Point2f center;
 			float radius;
 			minEnclosingCircle(handContour, center, radius);
 			line(original, center, handContour[min_idx], Scalar(0, 100, 255), 5);
 
-		//get the circle's bounding rect
+			//get the circle's bounding rect
 
-		//	Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
+			//	Rect boundingRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
 			Mat mask = Mat::zeros(binaryMat.size(), binaryMat.type());
 			circle(mask, center, radius * 5 / 6, CV_RGB(255, 255, 255), 10);
-		//	rectangle(mask, boundingRect, CV_RGB(255, 255, 255), -1);
-		//	rectangle(mask1, boundingRect1, CV_RGB(255, 255, 255), -1);
-				
-//check number of finger
+			
+			//check number of finger
 			Mat img_parted(binaryMat.size(), binaryMat.type());
 			img_parted = binaryMat & mask;
 			Mat label;
 			int num_label = connectedComponents(img_parted, label) - 1;
 			if (num_label == 2) {
 				trace.push_back(handContour[min_idx]);
+				if (trace.size() == 1)
+					init_y = trace[0].y + 2 / 7 * sizeofRect;
 				trace_cnt = 0;
 			}
 			else {
 				trace_cnt++;
-				if (trace_cnt >= 7) {
+				if (trace_cnt >= 7)
 					trace.clear();
-					img_cnt++;
-				}
-			}
-			
-			imshow("bin", binaryMat);
-
-			int idx = 0;
-			int startFrame = 0;
-			for (int i = 1; i < trace.size(); i++)
-			{
-				int init_x = trace[0].x - idx*sizeofRect + sizeofRect * 2 / 7, init_y = trace[0].y + 2/7*sizeofRect;
-				line(original, trace[i-1], trace[i], Scalar(255, 100, 0), 5);
-				line(binaryMat, trace[i - 1], trace[i], Scalar(255, 100, 0), 5);
-				rectangle(original, Rect(init_x - sizeofRect, init_y, sizeofRect, sizeofRect), CV_RGB(255, 0, 0), 3);
-				if (trace[i].x < (init_x - sizeofRect)){
-					//send data frome startFrame to currentFrame(==i)
-					//if delete mode, the number of idx represents the number of character will be deleting 
-					idx++;
-					startFrame = i;
-					cv::Mat subImg = binaryMat(cv::Rect(init_x - sizeofRect, init_y, sizeofRect, sizeofRect));
-					flip(subImg, subImg, 1);
-					bitwise_not(subImg, subImg);
-					imwrite("./images/" + to_string(idx + img_cnt * 4) + ".png", subImg, compression_params);
-					imshow("./images/" + to_string(idx + img_cnt * 4) + ".png", subImg);
-					
-				}
 			}
 
-//Mode select
+			//imshow("bin", binaryMat);
+
+			if (RecogMode != MOUSE_MODE) {
+				int idx = 0;
+				int startFrame = 0;
+				for (int i = 1; i < trace.size(); i++)
+				{
+					int init_x = trace[0].x - idx*sizeofRect + sizeofRect * 2 / 7;
+					//init_y = trace[0].y + 2 / 7 * sizeofRect;
+					line(original, trace[i - 1], trace[i], Scalar(255, 100, 0), 5);
+					line(outimg, trace[i - 1], trace[i], Scalar(255, 255, 255), 5);
+					rectangle(original, Rect(init_x - sizeofRect, init_y, sizeofRect, sizeofRect), CV_RGB(255, 0, 0), 3);
+					if (trace[i].x < (init_x - sizeofRect)){
+						//send data frome startFrame to currentFrame(==i)
+						//if delete mode, the number of idx represents the number of character will be deleting 
+						idx++;
+						img_cnt++;
+						startFrame = i;
+						cv::Mat subImg = outimg(cv::Rect(init_x - sizeofRect, init_y, sizeofRect, sizeofRect));
+						flip(subImg, subImg, 1);
+						bitwise_not(subImg, subImg);
+						String img_name = to_string(img_cnt) + ".png";
+						String output_name = to_string(img_cnt);
+						waiting_output_list.push_back(output_name);
+
+						imwrite("./images/" + img_name, subImg, compression_params);
+						
+						trace.erase(trace.begin(), trace.begin() + i);
+
+						std::string lang = "num";
+						if (RecogMode == CHAR_RECOGNITION_MODE)
+							lang = "fingkey";
+						else if (RecogMode == NUM_RECOGNITION_MODE)
+							lang = "num";
+
+						std::string t = ".\\tesseract-ocr\\tesseract.exe .\\images\\" + img_name + " .\\output\\" + output_name + " -l " + lang + " -psm 10";
+						WinExec(LPCSTR(t.c_str()), SW_HIDE);
+
+					}
+				}
+			}
+			else {
+				if (num_label != 2)
+					MouseClick(buffer);
+				else
+					MouseMoveAbsolute(buffer, (double)(CAM_WIDTH - handContour[min_idx].x) / (double)CAM_WIDTH * (int)SCREEN_WIDTH, (double)handContour[min_idx].y / ((double)CAM_HEIGHT * 5.0f / 6.0f)* (int)SCREEN_HEIGHT);
+			}
+
+
+			//Mode select
 			Mat overlay(original.size(), original.type());
 			original.copyTo(overlay);
 
@@ -223,7 +308,7 @@ int main(int argc, char** argv)
 					RecogMode = CHAR_RECOGNITION_MODE;
 					RecogModeChange_cnt = 0;
 					trace.clear();
-					printf("CHARACTER RECOGNITION MODE!\n");
+				//	printf("CHARACTER RECOGNITION MODE!\n");
 				}
 			}
 			else if (checkPointInRect(NumRecogRect, handContour[min_idx])){
@@ -232,7 +317,7 @@ int main(int argc, char** argv)
 					RecogMode = NUM_RECOGNITION_MODE;
 					RecogModeChange_cnt = 0;
 					trace.clear();
-					printf("NUMBER RECOGNITION MODE!\n");
+				//	printf("NUMBER RECOGNITION MODE!\n");
 				}
 			}
 			else if (checkPointInRect(SpaceRecogRect, handContour[min_idx])){
@@ -241,7 +326,7 @@ int main(int argc, char** argv)
 					RecogMode = SPACE_RECOGNITION_MODE;
 					RecogModeChange_cnt = 0;
 					trace.clear();
-					printf("SPACE RECOGNITION MODE!\n");
+				//	printf("SPACE RECOGNITION MODE!\n");
 				}
 			}
 			else if (checkPointInRect(DeleteRecogRect, handContour[min_idx])){
@@ -250,7 +335,16 @@ int main(int argc, char** argv)
 					RecogMode = DELETE_RECOGNITION_MODE;
 					RecogModeChange_cnt = 0;
 					trace.clear();
-					printf("DELETE RECOGNITION MODE!\n");
+				//	printf("DELETE RECOGNITION MODE!\n");
+				}
+			}
+			else if (checkPointInRect(MouseRect, handContour[min_idx])){
+				RecogModeChange_cnt++;
+				if (RecogModeChange_cnt == 7) {
+					RecogMode = MOUSE_MODE;
+					RecogModeChange_cnt = 0;
+					trace.clear();
+				//	printf("MOUSE MODE!\n");
 				}
 			}
 			else
@@ -262,24 +356,35 @@ int main(int argc, char** argv)
 				rectangle(overlay, NumRecogRect, CV_RGB(128, 128, 128), -1);
 				rectangle(overlay, SpaceRecogRect, CV_RGB(128, 128, 128), -1);
 				rectangle(overlay, DeleteRecogRect, CV_RGB(128, 128, 128), -1);
+				rectangle(overlay, MouseRect, CV_RGB(128, 128, 128), -1);
 			}
 			else if (RecogMode == NUM_RECOGNITION_MODE){
 				rectangle(overlay, CharRecogRect, CV_RGB(128, 128, 128), -1);
 				rectangle(overlay, NumRecogRect, CV_RGB(50, 205, 50), -1);
 				rectangle(overlay, SpaceRecogRect, CV_RGB(128, 128, 128), -1);
 				rectangle(overlay, DeleteRecogRect, CV_RGB(128, 128, 128), -1);
+				rectangle(overlay, MouseRect, CV_RGB(128, 128, 128), -1);
 			}
 			else if (RecogMode == SPACE_RECOGNITION_MODE){
 				rectangle(overlay, CharRecogRect, CV_RGB(128, 128, 128), -1);
 				rectangle(overlay, NumRecogRect, CV_RGB(128, 128, 128), -1);
 				rectangle(overlay, SpaceRecogRect, CV_RGB(50, 205, 50), -1);
 				rectangle(overlay, DeleteRecogRect, CV_RGB(128, 128, 128), -1);
+				rectangle(overlay, MouseRect, CV_RGB(128, 128, 128), -1);
 			}
 			else if (RecogMode == DELETE_RECOGNITION_MODE){
 				rectangle(overlay, CharRecogRect, CV_RGB(128, 128, 128), -1);
-				rectangle(overlay, NumRecogRect, CV_RGB(128, 128, 128), - 1);
+				rectangle(overlay, NumRecogRect, CV_RGB(128, 128, 128), -1);
 				rectangle(overlay, SpaceRecogRect, CV_RGB(128, 128, 128), -1);
 				rectangle(overlay, DeleteRecogRect, CV_RGB(50, 205, 50), -1);
+				rectangle(overlay, MouseRect, CV_RGB(128, 128, 128), -1);
+			}
+			else if (RecogMode == MOUSE_MODE){
+				rectangle(overlay, CharRecogRect, CV_RGB(128, 128, 128), -1);
+				rectangle(overlay, NumRecogRect, CV_RGB(128, 128, 128), -1);
+				rectangle(overlay, SpaceRecogRect, CV_RGB(128, 128, 128), -1);
+				rectangle(overlay, DeleteRecogRect, CV_RGB(128, 128, 128), -1);
+				rectangle(overlay, MouseRect, CV_RGB(50, 205, 50), -1);
 			}
 
 			addWeighted(overlay, 0.5, original, 1 - 0.5, 0, original);
@@ -292,19 +397,51 @@ int main(int argc, char** argv)
 			putText(original, "CHAR", CharStringPoint, 2, 0.7, Scalar::all(255));
 			putText(original, "DEL", DeleteStringPoint, 2, 0.7, Scalar::all(255));
 			putText(original, "SPACE", SpaceStringPoint, 2, 0.7, Scalar::all(255));
-			
+			putText(original, "MOUSE", MouseStringPoint, 2, 0.7, Scalar::all(255));
+
+			/*
+			*	Frame
+			*/
 			time(&end);
 			num_frame++;
-
 			std::ostringstream strs;
 			strs << num_frame / difftime(end, start);
 			std::string fpsString = strs.str();
 			putText(original, fpsString, Point(10, 30), 2, 0.7, Scalar::all(255));
 
 			imshow("Original", original);
-			//imshow("binary", binaryMat);
-			
-			
+
+			char cTemp = NULL;
+			if (waiting_output_list.size() > 0) {
+				FILE* fp;
+				String output_dir = ".\\output\\" + waiting_output_list[0] + ".txt";
+				system("cls");
+				if (fopen_s(&fp, output_dir.c_str(), "r") == 0) {
+					printf("# %s\n", mode_t[RecogMode % 10]);
+					if (RecogMode == CHAR_RECOGNITION_MODE || RecogMode == NUM_RECOGNITION_MODE){
+						cTemp = fgetc(fp);
+						if (bTop < MAX_STRING) buf[bTop++] = cTemp;
+					}
+					else if (RecogMode == SPACE_RECOGNITION_MODE){
+						cTemp = ' ';
+						if(bTop < MAX_STRING) buf[bTop++] = cTemp;
+					}
+					else if (RecogMode == DELETE_RECOGNITION_MODE){
+						cTemp = ' ';
+						if (bTop > 0) buf[bTop--] = NULL;
+					}
+					printf("curruntly entered\t : %c\n", cTemp);
+					buf[bTop] = NULL;
+					printf("Entered String \t\t: %s\n", buf);
+
+					waiting_output_list.erase(waiting_output_list.begin());
+				}
+				else {
+					printf("Recognition Fail!\n");
+				}
+			}
+
+
 			int keycode = waitKey(30);
 			if (keycode == 27)
 				break;
@@ -313,7 +450,7 @@ int main(int argc, char** argv)
 	catch (exception& e) {
 		cout << e.what() << endl;
 	}
-	
+
 	return 0;
 }
 
